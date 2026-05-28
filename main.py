@@ -4,8 +4,10 @@ from langchain_community.vectorstores import FAISS
 from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 import os
-from helper import SafeGoogleEmbeddings
+from helper import SafeGoogleEmbeddings, format_docs
 from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableLambda
+from langchain_core.output_parsers import StrOutputParser
 # Load variables from .env into the environment
 load_dotenv()
 
@@ -46,9 +48,13 @@ prompt = PromptTemplate(template="""
       {context}
       Question: {question}
     """, input_variables = ['context', 'question'])
-question = "What is a Large Language Model?"
-retrieved_docs = retriever.invoke(question)
-context_text = "\n\n".join(doc.page_content for doc in retrieved_docs)
-final_prompt = prompt.invoke({"context":context_text, "question":question})
-answer = model.invoke(final_prompt)
-print(answer.content)
+
+parallel_chain = RunnableParallel({
+    'context': retriever | RunnableLambda(format_docs),
+    'question': RunnablePassthrough()
+})
+
+parser = StrOutputParser()
+main_chain = parallel_chain | prompt | model | parser
+result = main_chain.invoke('What is an LLM used for?')
+print(result)
