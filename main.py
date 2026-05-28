@@ -6,10 +6,11 @@ from dotenv import load_dotenv
 import os
 import hashlib
 import json
-from helper import SafeGoogleEmbeddings, format_docs
+from helper import SafeGoogleEmbeddings, format_docs, ingest_youtube
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.documents import Document
 # Load variables from .env into the environment
 load_dotenv()
 
@@ -18,15 +19,15 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # === Configuration ===
-VIDEO_ID = "LPZh9BOjkQs"
+SOURCES = ["LPZh9BOjkQs", "iUU4O1sWtJA", "cUfLrn3TM3M"]
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 FAISS_INDEX_PATH = "faiss_index"
 
-def get_source_hash(video_id: str, chunk_size: int, chunk_overlap: int) -> str:
+def get_source_hash(chunk_size: int, chunk_overlap: int) -> str:
     """Generate a hash from the source config. If any of these change, the index is stale."""
     config = json.dumps({
-        "video_id": video_id,
+        "video_id": SOURCES,
         "chunk_size": chunk_size,
         "chunk_overlap": chunk_overlap,
     }, sort_keys=True)
@@ -49,24 +50,24 @@ def save_source_hash(index_path: str, current_hash: str):
     with open(hash_file, "w") as f:
         f.write(current_hash)
 #Fetching the transcript from the API
-yt_api = YouTubeTranscriptApi()
-fetched_transcript = yt_api.fetch(VIDEO_ID)
+
 
 #We convert the fetched transcript to plain text
-plain_text = " ".join(chunk.text for chunk in fetched_transcript)
-
+docs = []
+for VIDEO_ID in SOURCES:
+    docs.extend(ingest_youtube(VIDEO_ID))
 #Once we have the plain_text, we perform indexing on it
 #We need to ingest it, load it, then perform splitting
 splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
-chunks = splitter.create_documents([plain_text])
+chunks = splitter.split_documents(docs)
 
 #We have the chunks, we now generate the embeddings
 embeddings = SafeGoogleEmbeddings(
-    model="models/gemini-embedding-2",
+    model="models/gemini-embedding-001",
 )
 
 # Check if we need to rebuild or can load from cache
-current_hash = get_source_hash(VIDEO_ID, CHUNK_SIZE, CHUNK_OVERLAP)
+current_hash = get_source_hash(CHUNK_SIZE, CHUNK_OVERLAP)
 
 if should_rebuild_index(FAISS_INDEX_PATH, current_hash):
     print("Source changed or no index found. Building FAISS index...")
@@ -90,6 +91,7 @@ model = ChatAnthropic(model = "claude-haiku-4-5-20251001", temperature = 0.2)
 prompt = PromptTemplate(template="""
       You are a helpful assistant.
       Answer ONLY from the provided transcript context.
+      When answering, cite the source video and timestamp for each piece of information you use.
       If the context is insufficient, just say you don't know.
       {context}
       Question: {question}
@@ -102,5 +104,5 @@ parallel_chain = RunnableParallel({
 
 parser = StrOutputParser()
 main_chain = parallel_chain | prompt | model | parser
-result = main_chain.invoke('What is an LLM used for?')
+result = main_chain.invoke('What is LangGraph, how is it different from langchain?')
 print(result)
