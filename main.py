@@ -12,8 +12,9 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 import logging
-import time
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 # Load variables from .env into the environment
 load_dotenv()
 
@@ -61,7 +62,7 @@ embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 current_hash = get_source_hash(CHUNK_SIZE, CHUNK_OVERLAP)
 
 if should_rebuild_index(FAISS_INDEX_PATH, current_hash):
-    print("Source changed or no index found. Building FAISS index...")
+    logger.info("Source changed or no index found. Building FAISS index...")
     docs = []
     for VIDEO_ID in SOURCES:
         docs.extend(ingest_youtube(VIDEO_ID))
@@ -70,9 +71,9 @@ if should_rebuild_index(FAISS_INDEX_PATH, current_hash):
     vector_store = FAISS.from_documents(chunks, embeddings)
     vector_store.save_local(FAISS_INDEX_PATH)
     save_source_hash(FAISS_INDEX_PATH, current_hash)
-    print(f"FAISS index saved to '{FAISS_INDEX_PATH}/'")
+    logger.info(f"FAISS index saved to '{FAISS_INDEX_PATH}/'")
 else:
-    print("Source unchanged. Loading FAISS index from disk...")
+    logger.info("Source unchanged. Loading FAISS index from disk...")
     vector_store = FAISS.load_local(
         FAISS_INDEX_PATH, embeddings, allow_dangerous_deserialization=True
     )
