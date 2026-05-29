@@ -2,7 +2,7 @@ import time
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.documents import Document
 from youtube_transcript_api import YouTubeTranscriptApi
-
+from tenacity, import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 class SafeGoogleEmbeddings(GoogleGenerativeAIEmbeddings):
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         results = []
@@ -36,7 +36,7 @@ def format_docs(retrieved_docs):
     context_text = "\n\n".join(f"{doc.page_content}\n[Source: {doc.metadata['source']}, Timestamp: {doc.metadata['timestamp']}s]"
  for doc in retrieved_docs)
     return context_text
-
+@retry(stop = stop_after_attempt(3), wait = wait_exponential(multiplier =1, min = 2, max =10), retry = retry_if_exception_type(Exception))
 def ingest_youtube(video_id: str) -> list[Document]:
     yt_api = YouTubeTranscriptApi()
     fetched_transcript = yt_api.fetch(video_id)

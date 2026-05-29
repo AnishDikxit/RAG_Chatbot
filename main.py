@@ -12,7 +12,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 import logging
-
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 # Load variables from .env into the environment
@@ -108,27 +108,84 @@ rewrite_prompt = PromptTemplate(
 )
 rewrite_chain = rewrite_prompt | model | StrOutputParser()
 
+
+# === Retry-wrapped helpers for flaky network calls ===
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+)
+def rewrite_question(chat_history_str: str, question: str) -> str:
+    """Rewrite a follow-up question into a standalone question, with retries."""
+    return rewrite_chain.invoke({"chat_history": chat_history_str, "question": question})
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+)
+def retrieve_docs(question: str):
+    """Retrieve relevant documents from the vector store, with retries."""
+    return retriever.invoke(question)
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+)
+def stream_llm_response(chain, inputs: dict):
+    """Return the stream iterator for the LLM response, with retries.
+    
+    Note: retries apply to establishing the stream connection.
+    If the stream breaks mid-way, the outer try/except in chat() handles it.
+    """
+    return chain.stream(inputs)
+
+
 def chat():
     while True:
         user_input = input("You: ")
         if user_input.lower() in ("quit", "exit"):
             break
 
-        chat_history_str = format_chat_history(conversation_history)
-        standalone_question = rewrite_chain.invoke({"chat_history":chat_history_str, "question":user_input})
-        retrieved_docs = retriever.invoke(standalone_question)
-        context_text = format_docs(retrieved_docs)
-        result = ""
-        for token in (prompt | model | StrOutputParser()).stream({
-            "chat_history": chat_history_str,
-            "context": context_text,
-            "question": user_input
-        }):
-            result+=token
-            print(token, end="", flush = True)
-        
-        print('\n\n')
-        conversation_history.append({"role":"Human", "content":user_input})
-        conversation_history.append({"role":"Assistant", "content":result})
+        try:
+            chat_history_str = format_chat_history(conversation_history)
+
+            # Rewrite question (retries on transient failures)
+            standalone_question = rewrite_question(chat_history_str, user_input)
+
+            # Retrieve context (retries on transient failures)
+            retrieved_docs = retrieve_docs(standalone_question)
+            context_text = format_docs(retrieved_docs)
+
+            # Stream LLM response (retries on connection failure)
+            chain = prompt | model | StrOutputParser()
+            stream = stream_llm_response(chain, {
+                "chat_history": chat_history_str,
+                "context": context_text,
+                "question": user_input,
+            })
+
+            result = ""
+            for token in stream:
+                result += token
+                print(token, end="", flush=True)
+
+            print('\n\n')
+            conversation_history.append({"role": "Human", "content": user_input})
+            conversation_history.append({"role": "Assistant", "content": result})
+
+        except KeyboardInterrupt:
+            print("\nExiting...")
+            break
+        except Exception as e:
+            logger.exception("An error occurred while processing your question.")
+            print(f"\n[Error] Something went wrong: {e}\n")
 if __name__ == "__main__":
     chat()
