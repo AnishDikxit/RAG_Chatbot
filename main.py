@@ -1,5 +1,5 @@
 from youtube_transcript_api import YouTubeTranscriptApi
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.vectorstores import FAISS
 from langchain_community.retrievers import BM25Retriever
 from langchain_classic.retrievers import EnsembleRetriever
@@ -28,16 +28,15 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # === Configuration ===
 SOURCES = ["LPZh9BOjkQs", "iUU4O1sWtJA", "cUfLrn3TM3M"]
-CHUNK_SIZE = 1100
-CHUNK_OVERLAP = 200
+
 FAISS_INDEX_PATH = "faiss_index"
 
-def get_source_hash(chunk_size: int, chunk_overlap: int) -> str:
+def get_source_hash() -> str:
     """Generate a hash from the source config. If any of these change, the index is stale."""
     config = json.dumps({
         "video_id": SOURCES,
-        "chunk_size": chunk_size,
-        "chunk_overlap": chunk_overlap,
+        "chunking_strategy": "semantic",
+        "breakpoint_threshold_type": "percentile"
     }, sort_keys=True)
     return hashlib.md5(config.encode()).hexdigest()
 
@@ -63,15 +62,19 @@ embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 # Check if we need to rebuild or can load from cache
 # Check if we need to rebuild or can load from cache
-current_hash = get_source_hash(CHUNK_SIZE, CHUNK_OVERLAP)
+current_hash = get_source_hash()
 
 if should_rebuild_index(FAISS_INDEX_PATH, current_hash):
     logger.info("Source changed or no index found. Building FAISS index...")
     docs = []
     for VIDEO_ID in SOURCES:
         docs.extend(ingest_youtube(VIDEO_ID))
-    splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
-    chunks = splitter.split_documents(docs)
+    semantic_splitter = SemanticChunker(
+        embeddings,
+        breakpoint_threshold_type="percentile",  # or "standard_deviation", "interquartile"
+    )
+    chunks = semantic_splitter.split_documents(docs)
+
     vector_store = FAISS.from_documents(chunks, embeddings)
     vector_store.save_local(FAISS_INDEX_PATH)
     # Persist chunks for BM25 retriever on subsequent loads
