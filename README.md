@@ -1,12 +1,12 @@
-# RAG Chatbot — YouTube Transcript Q&A
+# 🤖 RAG Chatbot — YouTube Transcript Q&A
 
-A Retrieval-Augmented Generation chatbot that answers questions grounded in YouTube video transcripts. Built with LangChain, FAISS, BM25, cross-encoder re-ranking, and Claude as the generation LLM.
+A **Retrieval-Augmented Generation (RAG)** chatbot that answers questions grounded in **YouTube video transcripts**. Built with **LangChain**, **FAISS**, **BM25**, **cross-encoder re-ranking**, and **Claude** as the generation LLM.
 
 ---
 
-## Architecture
+## ⭐ Architecture
 
-<!-- ─────────────────────────────────────────────────────────────────────────
+<!-- ────────────────────────────────────────────────────────────────[...]
      DIAGRAM PLACEHOLDER — Create in draw.io
      
      Diagram 1: End-to-End Pipeline Architecture
@@ -44,11 +44,11 @@ A Retrieval-Augmented Generation chatbot that answers questions grounded in YouT
                                             └──────────────────────────┘
      
      Suggested file: docs/architecture.drawio.png
-     ───────────────────────────────────────────────────────────────────────── -->
+     ────────────────────────────────────────────────────────────────[...]
 
 ![Architecture Diagram](docs/architecture.drawio.png)
 
-<!-- ─────────────────────────────────────────────────────────────────────────
+<!-- ────────────────────────────────────────────────────────────────[...]
      DIAGRAM PLACEHOLDER — Create in draw.io
      
      Diagram 2: Retrieval & Re-Ranking Detail
@@ -67,11 +67,11 @@ A Retrieval-Augmented Generation chatbot that answers questions grounded in YouT
                                                               Top-N re-ranked
      
      Suggested file: docs/retrieval-detail.drawio.png
-     ───────────────────────────────────────────────────────────────────────── -->
+     ────────────────────────────────────────────────────────────────[...]
 
 ---
 
-## Project Structure
+## 🗂️ Project Structure
 
 ```
 RAG_Chatbot/
@@ -90,9 +90,9 @@ RAG_Chatbot/
 
 ---
 
-## Design Decisions
+## 🧠 Design Decisions
 
-### Chunking: Semantic over Fixed-Size
+### ✂️ Chunking: Semantic over Fixed-Size
 
 | Strategy | How it splits | Pros | Cons |
 |----------|--------------|------|------|
@@ -101,34 +101,38 @@ RAG_Chatbot/
 | Sentence-Window | Single sentences (returns window) | High precision for factoids | Complex setup, needs large window |
 | Parent-Document | Small children, returns parent | Broad context | Returns too much irrelevant text |
 
-**Why semantic fits here:** YouTube transcripts are conversational with natural topic shifts. Speakers don't respect character boundaries — thoughts span variable lengths. The downstream cross-encoder benefits from coherent chunks that are easier to score for relevance.
+**Why semantic fits here:** YouTube transcripts are conversational with natural topic shifts. Speakers don't respect character boundaries — thoughts span variable lengths. The downstream cross-encoder benefits from coherent units.
 
-Configuration: `breakpoint_threshold_type="percentile"` — splits where inter-sentence similarity drops below the 95th percentile.
+Configuration: `breakpoint_threshold_type="percentile"` — splits where inter-sentence similarity drops below the **95th percentile**.
 
-### Retrieval: Hybrid (BM25 + FAISS)
+### 🔎 Retrieval: Hybrid (BM25 + FAISS)
 
-Dense retrieval (FAISS with `all-MiniLM-L6-v2` embeddings) captures semantic similarity. Sparse retrieval (BM25) catches exact keyword matches that embeddings might miss — useful for acronyms, proper nouns, and technical terms.
+- **Dense retrieval (FAISS)** with `all-MiniLM-L6-v2` embeddings captures semantic similarity.
+- **Sparse retrieval (BM25)** catches exact keyword matches embeddings might miss (acronyms, proper nouns, exact phrasing).
 
-Combined via `EnsembleRetriever` with weights 0.3 (BM25) / 0.7 (FAISS). The evaluation showed BM25 adds marginal value for transcript-style queries, but it's cheap to include and helps edge cases.
+Combined via `EnsembleRetriever` with weights **0.3 (BM25)** / **0.7 (FAISS)**.
 
-### Re-Ranking: Cross-Encoder
+### 🥇 Re-Ranking: Cross-Encoder
 
-Initial retrieval is fast but imprecise (bi-encoder). A cross-encoder (`ms-marco-MiniLM-L-6-v2`) jointly encodes the query and each candidate, producing much more accurate relevance scores. This "retrieve many, keep few" pattern (k=10 → top-5) is the single biggest quality lever in the pipeline.
+Initial retrieval is fast but imprecise (bi-encoder). A cross-encoder (`ms-marco-MiniLM-L-6-v2`) jointly encodes the **query + candidate chunk**, producing much more accurate relevance scores.
 
-### Multi-Turn: Query Rewriting
+### 🔁 Multi-Turn: Query Rewriting
 
-For follow-up questions, a separate LLM call rewrites the question into a standalone form using conversation history. This avoids polluting retrieval with pronouns and implicit references.
+For follow-up questions, a separate LLM call rewrites the question into a **standalone** query using conversation history. This prevents retrieval from being polluted by pronouns / implicit references.
 
-### Resilience: Retries with Backoff
+### 🛡️ Resilience: Retries with Backoff
 
-All external calls (YouTube API, LLM, retriever) are wrapped with `tenacity` retries — exponential backoff, 3 attempts, logging before each retry.
+All external calls (YouTube API, LLM, retriever) are wrapped with `tenacity` retries — **exponential backoff**, **3 attempts**, logging before each retry.
 
 ---
 
-## Evaluation Results
+## 📊 Evaluation Results
 
-Evaluated on **14 hand-crafted Q&A pairs** across 3 YouTube source videos.  
-Judge LLM: Claude Haiku 4.5 | Embeddings: all-MiniLM-L6-v2 | Framework: [Ragas](https://docs.ragas.io/)
+Evaluated on **14 hand-crafted Q&A pairs** across **3 YouTube source videos**.
+
+- 🧑‍⚖️ Judge LLM: **Claude Haiku 4.5**
+- 🧩 Embeddings: **all-MiniLM-L6-v2**
+- 🧪 Framework: [Ragas](https://docs.ragas.io/)
 
 | Configuration | Faithfulness | Answer Relevancy | Context Precision | Context Recall |
 |---------------|:---:|:---:|:---:|:---:|
@@ -137,9 +141,9 @@ Judge LLM: Claude Haiku 4.5 | Embeddings: all-MiniLM-L6-v2 | Framework: [Ragas](
 | FAISS-only (no BM25) | 0.874 | 0.770 | 0.762 | 0.833 |
 | Equal weights (0.5/0.5) | 0.867 | 0.705 | 0.750 | 0.833 |
 | k=20, rerank top-3 | 0.886 | 0.634 | 0.762 | 0.833 |
-| **k=10, rerank top-5** | **0.892** | **0.814** | **0.768** | **0.940** |
+| ⭐ **k=10, rerank top-5** | **0.892** | **0.814** | **0.768** | **0.940** |
 
-<!-- ─────────────────────────────────────────────────────────────────────────
+<!-- ────────────────────────────────────────────────────────────────[...]
      DIAGRAM PLACEHOLDER — Create in draw.io
      
      Diagram 3: Evaluation Results Bar Chart
@@ -151,32 +155,28 @@ Judge LLM: Claude Haiku 4.5 | Embeddings: all-MiniLM-L6-v2 | Framework: [Ragas](
      across the 4 metrics.
      
      Suggested file: docs/eval-results-chart.drawio.png
-     ───────────────────────────────────────────────────────────────────────── -->
+     ────────────────────────────────────────────────────────────────[...]
 
 ![Evaluation Results](docs/eval-results-chart.drawio.png)
 
-### Key Findings
+### ⭐ Key Findings
 
-1. **Re-ranking is the biggest quality lever.** Removing it drops context precision by 14 points (0.75 → 0.61) and answer relevancy by 3.5 points. The cross-encoder is doing real work.
-
-2. **More context to the LLM helps significantly.** `k=10, rerank top-5` is the best config across all metrics. Giving the LLM 5 re-ranked chunks instead of 3 boosted context recall from 0.83 → 0.94 and answer relevancy from 0.68 → 0.81.
-
-3. **BM25 adds marginal value for transcripts.** FAISS-only actually scored slightly better on answer relevancy (0.77 vs 0.68). For conversational content, semantic similarity alone is sufficient. BM25 would matter more with keyword-heavy queries.
-
-4. **Wider candidate pool helps faithfulness but hurts focus.** k=20 improves faithfulness (0.87 → 0.89) but the answers become less relevant — the re-ranker has more noise to sort through.
-
-5. **Ensemble weights are not sensitive.** 0.3/0.7 vs 0.5/0.5 produced nearly identical results, confirming the re-ranker dominates downstream quality regardless of initial retrieval ordering.
+1. 🥇 **Re-ranking is the biggest quality lever.** Removing it drops context precision by 14 points (0.75 → 0.61) and answer relevancy by 3.5 points.
+2. 📈 **More context to the LLM helps significantly.** `k=10, rerank top-5` is best across all metrics. Giving the LLM 5 re-ranked chunks instead of 3 boosted context recall from 0.83 → 0.94.
+3. 🧾 **BM25 adds marginal value for transcripts.** FAISS-only scored slightly better on answer relevancy (0.77 vs 0.68). For conversational content, semantic similarity alone is often sufficient.
+4. 🎯 **Wider candidate pool helps faithfulness but hurts focus.** k=20 improves faithfulness (0.87 → 0.89) but answers become less relevant due to more noise.
+5. ⚖️ **Ensemble weights are not very sensitive.** 0.3/0.7 vs 0.5/0.5 produced similar results, confirming the re-ranker dominates downstream quality.
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
-### Prerequisites
+### ✅ Prerequisites
 
-- Python 3.11+
-- An [Anthropic API key](https://console.anthropic.com/)
+- 🐍 Python **3.11+**
+- 🔑 An [Anthropic API key](https://console.anthropic.com/)
 
-### Installation
+### 📦 Installation
 
 ```bash
 git clone <repo-url>
@@ -188,7 +188,7 @@ venv\Scripts\activate        # Windows
 pip install -r requirements.txt  # (see dependencies below)
 ```
 
-### Configuration
+### ⚙️ Configuration
 
 Create a `.env` file:
 
@@ -198,7 +198,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 All pipeline parameters live in `config.py` — retrieval k, weights, model names, prompts.
 
-### Usage
+### ▶️ Usage
 
 ```bash
 # Interactive chat (streams responses)
@@ -214,7 +214,7 @@ python eval_experiments.py --experiment k10_top5
 
 ---
 
-## Dependencies
+## 📚 Dependencies
 
 | Package | Purpose |
 |---------|---------|
@@ -229,40 +229,43 @@ python eval_experiments.py --experiment k10_top5
 
 ---
 
-## What I'd Do Next
+## 🛠️ What I'd Do Next
 
-### Short-term improvements
-- **Persist the best config as default** — update `config.py` to use k=10, top-5 (already done based on eval results)
-- **Add a requirements.txt / pyproject.toml** — pin exact versions for reproducibility
-- **Citation formatting** — surface video title + clickable timestamp links in answers instead of raw video IDs
-- **Conversation memory limits** — cap history to last N turns to avoid prompt bloat
+### ⭐ Short-term improvements
 
-### Medium-term
-- **Agentic retrieval** — let the LLM decide when to retrieve vs answer from memory, and reformulate queries iteratively
-- **Chunk metadata enrichment** — add video title, speaker name, topic tags to improve filtering
-- **Evaluation expansion** — grow the dataset to 50+ questions, add multi-hop and comparison questions
-- **User-facing API** — wrap in FastAPI with WebSocket streaming for a proper frontend
+- ✅ **Persist the best config as default** — update `config.py` to use k=10, top-5 (already done based on eval results)
+- 📌 **Add a `requirements.txt` / `pyproject.toml`** — pin exact versions for reproducibility
+- 🔗 **Citation formatting** — surface video title + clickable timestamp links in answers instead of raw video IDs
+- 🧠 **Conversation memory limits** — cap history to last N turns to avoid prompt bloat
 
-### Longer-term / research
-- **Fine-tuned embeddings** — train on in-domain (transcript, Q&A) pairs to improve retrieval without re-ranking overhead
-- **Adaptive chunking** — dynamically choose chunk strategy per video based on content type (lecture vs interview vs tutorial)
-- **Multi-modal** — incorporate video frames / slides for visual content grounding
-- **Feedback loop** — collect user thumbs-up/down to continuously improve retrieval and generation
+### 🧩 Medium-term
+
+- 🤖 **Agentic retrieval** — let the LLM decide when to retrieve vs answer from memory, and reformulate queries iteratively
+- 🏷️ **Chunk metadata enrichment** — add video title, speaker name, topic tags to improve filtering
+- 🧪 **Evaluation expansion** — grow the dataset to 50+ questions, add multi-hop and comparison questions
+- 🌐 **User-facing API** — wrap in FastAPI with WebSocket streaming for a proper frontend
+
+### 🔬 Longer-term / research
+
+- 🧬 **Fine-tuned embeddings** — train on in-domain (transcript, Q&A) pairs to improve retrieval without re-ranking overhead
+- 🧠 **Adaptive chunking** — dynamically choose chunk strategy per video (lecture vs interview vs tutorial)
+- 🖼️ **Multi-modal** — incorporate video frames / slides for visual content grounding
+- 🔁 **Feedback loop** — collect user thumbs-up/down to continuously improve retrieval and generation
 
 ---
 
-## Diagrams to Create (draw.io)
+## 🖼️ Diagrams to Create (draw.io)
 
 | # | Diagram | What to show | Suggested filename |
 |---|---------|-------------|-------------------|
-| 1 | **End-to-End Pipeline** | Full data flow from YouTube API → Ingest → Chunk → Index → Query → Retrieve → Re-rank → Generate | `docs/architecture.drawio.png` |
-| 2 | **Retrieval & Re-Ranking Detail** | Zoomed view of BM25 + FAISS → EnsembleRetriever → Cross-Encoder scoring → Top-N selection | `docs/retrieval-detail.drawio.png` |
-| 3 | **Eval Results Chart** | Grouped bar chart or radar chart comparing all 6 configs across 4 metrics, highlighting the winner | `docs/eval-results-chart.drawio.png` |
+| 1 | ⭐ **End-to-End Pipeline** | Full data flow from YouTube API → Ingest → Chunk → Index → Query → Retrieve → Re-rank → Generate | `docs/architecture.drawio.png` |
+| 2 | 🔎 **Retrieval & Re-Ranking Detail** | Zoomed view of BM25 + FAISS → EnsembleRetriever → Cross-Encoder scoring → Top-N selection | `docs/retrieval-detail.drawio.png` |
+| 3 | 📊 **Eval Results Chart** | Grouped bar chart or radar chart comparing all 6 configs across 4 metrics, highlighting the winner | `docs/eval-results-chart.drawio.png` |
 
 Once you export the PNGs into a `docs/` folder, the image links in this README will resolve automatically.
 
 ---
 
-## License
+## 📄 License
 
 MIT
