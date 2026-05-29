@@ -1,11 +1,14 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
+from langchain_community.retrievers import BM25Retriever
+from langchain_classic.retrievers import EnsembleRetriever
 from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 import os
 import hashlib
 import json
+import pickle
 from helper import format_docs, ingest_youtube, format_chat_history
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -24,7 +27,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # === Configuration ===
 SOURCES = ["LPZh9BOjkQs", "iUU4O1sWtJA", "cUfLrn3TM3M"]
-CHUNK_SIZE = 1000
+CHUNK_SIZE = 1100
 CHUNK_OVERLAP = 200
 FAISS_INDEX_PATH = "faiss_index"
 
@@ -70,6 +73,9 @@ if should_rebuild_index(FAISS_INDEX_PATH, current_hash):
     chunks = splitter.split_documents(docs)
     vector_store = FAISS.from_documents(chunks, embeddings)
     vector_store.save_local(FAISS_INDEX_PATH)
+    # Persist chunks for BM25 retriever on subsequent loads
+    with open(os.path.join(FAISS_INDEX_PATH, "chunks.pkl"), "wb") as f:
+        pickle.dump(chunks, f)
     save_source_hash(FAISS_INDEX_PATH, current_hash)
     logger.info(f"FAISS index saved to '{FAISS_INDEX_PATH}/'")
 else:
@@ -77,11 +83,14 @@ else:
     vector_store = FAISS.load_local(
         FAISS_INDEX_PATH, embeddings, allow_dangerous_deserialization=True
     )
-#we have successfully completed till the vector store setup
-#we move further for the retrieval
-#We perform simple similarity search
-retriever = vector_store.as_retriever(search_type = "similarity", search_kwargs = {"k":4})
-#Augmentation of retrieved chunks and query
+    # Load persisted chunks for BM25
+    with open(os.path.join(FAISS_INDEX_PATH, "chunks.pkl"), "rb") as f:
+        chunks = pickle.load(f)
+
+# === Hybrid Retrieval: BM25 (sparse) + FAISS (dense) ===
+faiss_retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 4})
+bm25_retriever = BM25Retriever.from_documents(chunks, k=4)
+retriever = EnsembleRetriever(retrievers=[bm25_retriever, faiss_retriever], weights=[0.3, 0.7])
 
 #Setting up LLM model first
 model = ChatAnthropic(model = "claude-haiku-4-5-20251001", temperature = 0.2)

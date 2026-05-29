@@ -2,7 +2,7 @@ import time
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.documents import Document
 from youtube_transcript_api import YouTubeTranscriptApi
-from tenacity, import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 class SafeGoogleEmbeddings(GoogleGenerativeAIEmbeddings):
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         results = []
