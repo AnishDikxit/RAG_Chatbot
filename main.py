@@ -160,6 +160,44 @@ def stream_llm_response(chain, inputs: dict):
     """
     return chain.stream(inputs)
 
+def answer_question(question: str, chat_history: list = None) -> dict:
+    """Run the full RAG pipeline and return question, answer, and contexts.
+    
+    Args:
+        question: The user's question.
+        chat_history: Optional conversation history. If None/empty, skips rewriting
+                      (treats question as standalone). Used by chat() for multi-turn,
+                      ignored by eval.py for single-turn evaluation.
+    
+    Returns:
+        dict with keys: "question", "answer", "contexts"
+    """
+    chat_history_str = format_chat_history(chat_history) if chat_history else ""
+
+    # Only rewrite if there's conversation history (multi-turn)
+    if chat_history_str:
+        standalone_question = rewrite_question(chat_history_str, question)
+    else:
+        standalone_question = question
+
+    # Retrieve and re-rank
+    retrieved_docs = retrieve_docs(standalone_question)
+    reranked_docs = rerank_docs(standalone_question, retrieved_docs)
+    context_text = format_docs(reranked_docs)
+
+    # Generate answer (non-streaming for programmatic use)
+    chain = prompt | model | StrOutputParser()
+    answer = chain.invoke({
+        "chat_history": chat_history_str,
+        "context": context_text,
+        "question": question,
+    })
+
+    return {
+        "question": question,
+        "answer": answer,
+        "contexts": [doc.page_content for doc in reranked_docs],
+    }
 
 def chat():
     while True:

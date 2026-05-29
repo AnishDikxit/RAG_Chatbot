@@ -1,0 +1,86 @@
+[
+  {
+    "question": "How much time would humans take to read the amount of text used to train GPT-3?",
+    "ground_truth": "If read non-stop 24-7, it would take about 2600 years.",
+    "source_video": "LPZh9BOjkQs",
+    "timestamp_hint": 97
+  },
+  {
+    "question": "What does an algorithm called backpropagation do?",
+    "ground_truth": "Used to tweak all of the parameters, makes model more likely to choose the true next word and less likely to choose the other words.",
+    "source_video": "LPZh9BOjkQs",
+    "timestamp_hint": 165
+  },
+  {
+    "question": "What is the very first step of the transformer?",
+    "ground_truth": "Associate each word with a long list of numbers.",
+    "source_video": "LPZh9BOjkQs",
+    "timestamp_hint": 291
+  },
+  {
+    "question": "Who is Evan?",
+    "ground_truth": "Co-founder of Hello interview, and a former Meta staff engineer.",
+    "source_video": "iUU4O1sWtJA",
+    "timestamp_hint": 0
+  },
+  {
+    "question": "What is the framework or steps we follow for the system design interview?",
+    "ground_truth": "Requirements, Core Entities, API/Interface, Data Flow, High-Level Design, Deep Dives",
+    "source_video": "iUU4O1sWtJA",
+    "timestamp_hint": 116
+  },
+  {
+    "question": "What is the CAP Theorem?",
+    "ground_truth": "Theorem that states when considering Consistency, Availability and Partition Tolerance, you can only have two of those things.",
+    "source_video": "iUU4O1sWtJA",
+    "timestamp_hint": 566
+  },
+  {
+    "question": "When it comes to redirect, how many options do we have what are they?",
+    "ground_truth": "We have 2 options a 302 and 301 redirect, both different status codes.",
+    "source_video": "iUU4O1sWtJA",
+    "timestamp_hint": 1423
+  },
+  {
+    "question": "What type of redirect is 301 redirect?",
+    "ground_truth": "It is a permanent redirect.",
+    "source_video": "iUU4O1sWtJA",
+    "timestamp_hint": 1432
+  },
+  {
+    "question": "What things do we need when creating a short url?",
+    "ground_truth": "We need the creation to be fast, unique, short.",
+    "source_video": "iUU4O1sWtJA",
+    "timestamp_hint": 1727
+  },
+  {
+    "question": "How hash functions work according to the speaker?",
+    "ground_truth": "Despite being deterministic, has the waterfall effect - on changing one bit in the input, the whole hash changes significantly.",
+    "source_video": "iUU4O1sWtJA",
+    "timestamp_hint": 2143
+  },
+  {
+    "question": "What's the true difference between Langchain and Langgraph?",
+    "ground_truth": "Langchain - built for simple and deterministic tasks; Langgraph - instead of a simple chatbot, a deep research assistant is required, where difference arises due to state graph.",
+    "source_video": "cUfLrn3TM3M",
+    "timestamp_hint": 16
+  },
+  {
+    "question": "What is a state according to the speaker?",
+    "ground_truth": "A state essentially serves as a persistent memory for the workflow to store pertinent information at all different parts of the workflow.",
+    "source_video": "cUfLrn3TM3M",
+    "timestamp_hint": 191
+  },
+  {
+    "question": "Does the farewell prompt receive the name? How do we verify this?",
+    "ground_truth": "Look closely at line 36, the farewell prompt doesn't even receive the name.",
+    "source_video": "cUfLrn3TM3M",
+    "timestamp_hint": 385
+  },
+  {
+    "question": "What if one wants to see the workflow visualized in real time?",
+    "ground_truth": "There's also a streamllet app file that provides an interactive web interface.",
+    "source_video": "cUfLrn3TM3M",
+    "timestamp_hint": 711
+  }
+]
