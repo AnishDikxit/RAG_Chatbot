@@ -6,7 +6,7 @@ A **Retrieval-Augmented Generation (RAG)** chatbot that answers questions ground
 
 ## ⭐ Architecture
 
-<!-- ────────────────────────────────────────────────────────────────[...]
+<!-- ────────────────────────────────────────────────────────────────
      DIAGRAM PLACEHOLDER — Create in draw.io
      
      Diagram 1: End-to-End Pipeline Architecture
@@ -44,11 +44,11 @@ A **Retrieval-Augmented Generation (RAG)** chatbot that answers questions ground
                                             └──────────────────────────┘
      
      Suggested file: docs/architecture.drawio.png
-     ────────────────────────────────────────────────────────────────[...]
+     ──────────────────────────────────────────────────────────────── -->
 
 ![Architecture Diagram](docs/architecture.drawio.png)
 
-<!-- ────────────────────────────────────────────────────────────────[...]
+<!-- ────────────────────────────────────────────────────────────────
      DIAGRAM PLACEHOLDER — Create in draw.io
      
      Diagram 2: Retrieval & Re-Ranking Detail
@@ -67,7 +67,7 @@ A **Retrieval-Augmented Generation (RAG)** chatbot that answers questions ground
                                                               Top-N re-ranked
      
      Suggested file: docs/retrieval-detail.drawio.png
-     ────────────────────────────────────────────────────────────────[...]
+     ──────────────────────────────────────────────────────────────── -->
 
 ---
 
@@ -143,7 +143,7 @@ Evaluated on **14 hand-crafted Q&A pairs** across **3 YouTube source videos**.
 | k=20, rerank top-3 | 0.886 | 0.634 | 0.762 | 0.833 |
 | ⭐ **k=10, rerank top-5** | **0.892** | **0.814** | **0.768** | **0.940** |
 
-<!-- ────────────────────────────────────────────────────────────────[...]
+<!-- ────────────────────────────────────────────────────────────────
      DIAGRAM PLACEHOLDER — Create in draw.io
      
      Diagram 3: Evaluation Results Bar Chart
@@ -155,7 +155,7 @@ Evaluated on **14 hand-crafted Q&A pairs** across **3 YouTube source videos**.
      across the 4 metrics.
      
      Suggested file: docs/eval-results-chart.drawio.png
-     ────────────────────────────────────────────────────────────────[...]
+     ──────────────────────────────────────────────────────────────── -->
 
 ![Evaluation Results](docs/eval-results-chart.drawio.png)
 
