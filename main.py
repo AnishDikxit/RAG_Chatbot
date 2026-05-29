@@ -11,7 +11,8 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
-
+import logging
+import time
 
 # Load variables from .env into the environment
 load_dotenv()
@@ -116,12 +117,15 @@ def chat():
         standalone_question = rewrite_chain.invoke({"chat_history":chat_history_str, "question":user_input})
         retrieved_docs = retriever.invoke(standalone_question)
         context_text = format_docs(retrieved_docs)
-        result = (prompt | model | StrOutputParser()).invoke({
+        result = ""
+        for token in (prompt | model | StrOutputParser()).stream({
             "chat_history": chat_history_str,
             "context": context_text,
             "question": user_input
-        })
-        print(result)
+        }):
+            result+=token
+            print(token, end="", flush = True)
+        
         print('\n\n')
         conversation_history.append({"role":"Human", "content":user_input})
         conversation_history.append({"role":"Assistant", "content":result})
