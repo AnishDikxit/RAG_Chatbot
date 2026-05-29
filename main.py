@@ -9,11 +9,12 @@ import os
 import hashlib
 import json
 import pickle
-from helper import format_docs, ingest_youtube, format_chat_history
+from helper import format_docs, ingest_youtube, format_chat_history, rerank_docs
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
+
 import logging
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -88,8 +89,8 @@ else:
         chunks = pickle.load(f)
 
 # === Hybrid Retrieval: BM25 (sparse) + FAISS (dense) ===
-faiss_retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 4})
-bm25_retriever = BM25Retriever.from_documents(chunks, k=4)
+faiss_retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 10})
+bm25_retriever = BM25Retriever.from_documents(chunks, k=10)
 retriever = EnsembleRetriever(retrievers=[bm25_retriever, faiss_retriever], weights=[0.3, 0.7])
 
 #Setting up LLM model first
@@ -171,7 +172,8 @@ def chat():
 
             # Retrieve context (retries on transient failures)
             retrieved_docs = retrieve_docs(standalone_question)
-            context_text = format_docs(retrieved_docs)
+            reranked_docs = rerank_docs(standalone_question, retrieved_docs)
+            context_text = format_docs(reranked_docs)
 
             # Stream LLM response (retries on connection failure)
             chain = prompt | model | StrOutputParser()

@@ -3,6 +3,13 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.documents import Document
 from youtube_transcript_api import YouTubeTranscriptApi
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from sentence_transformers import CrossEncoder
+import logging
+logging.basicConfig(
+    level = logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 class SafeGoogleEmbeddings(GoogleGenerativeAIEmbeddings):
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         results = []
@@ -58,3 +65,25 @@ def ingest_youtube(video_id: str) -> list[Document]:
     return docs
 def format_chat_history(history)->str:
     return "\n".join(f"{msg['role']}: {msg['content']}" for msg in history)
+
+def rerank_docs(query:str, retrieved_docs):
+    logger.info(f"Re-ranking {len(retrieved_docs)} candidates for query: '{query[:80]}...'")
+    pairs = [(query, doc.page_content) for doc in retrieved_docs]
+    scores = cross_encoder.predict(pairs)
+
+    # Log scores before sorting
+    for i, (score, doc) in enumerate(zip(scores, retrieved_docs)):
+        logger.debug(f"  Candidate {i+1}: score={score:.4f} | source={doc.metadata['source']} @ {doc.metadata['timestamp']}s")
+
+    temp = sorted(zip(scores, retrieved_docs), reverse = True)
+    result = []
+    for i in range(3):
+        score, doc = temp[i]
+        result.append(doc)
+
+    # Log the top-3 after re-ranking
+    logger.info("Re-ranking complete. Top-3 selected:")
+    for i, (score, doc) in enumerate(temp[:3]):
+        logger.info(f"  #{i+1}: score={score:.4f} | source={doc.metadata['source']} @ {doc.metadata['timestamp']}s")
+
+    return result
