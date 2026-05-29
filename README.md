@@ -68,7 +68,7 @@ A **Retrieval-Augmented Generation (RAG)** chatbot that answers questions ground
      
      Suggested file: docs/retrieval-detail.drawio.png
      ──────────────────────────────────────────────────────────────── -->
-
+![Retrieval & Re-Ranking Detail](docs/retrieval-detail.drawio.png)
 ---
 
 ## 🗂️ Project Structure
