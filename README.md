@@ -179,7 +179,7 @@ Evaluated on **14 hand-crafted Q&A pairs** across **3 YouTube source videos**.
 ### 📦 Installation
 
 ```bash
-git clone <repo-url>
+git clone [<repo-url>](https://github.com/AnishDikxit/RAG_Chatbot)
 cd RAG_Chatbot
 python -m venv venv
 venv\Scripts\activate        # Windows
