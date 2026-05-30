@@ -253,19 +253,3 @@ python eval_experiments.py --experiment k10_top5
 - 🔁 **Feedback loop** — collect user thumbs-up/down to continuously improve retrieval and generation
 
 ---
-
-## 🖼️ Diagrams to Create (draw.io)
-
-| # | Diagram | What to show | Suggested filename |
-|---|---------|-------------|-------------------|
-| 1 | ⭐ **End-to-End Pipeline** | Full data flow from YouTube API → Ingest → Chunk → Index → Query → Retrieve → Re-rank → Generate | `docs/architecture.drawio.png` |
-| 2 | 🔎 **Retrieval & Re-Ranking Detail** | Zoomed view of BM25 + FAISS → EnsembleRetriever → Cross-Encoder scoring → Top-N selection | `docs/retrieval-detail.drawio.png` |
-| 3 | 📊 **Eval Results Chart** | Grouped bar chart or radar chart comparing all 6 configs across 4 metrics, highlighting the winner | `docs/eval-results-chart.drawio.png` |
-
-Once you export the PNGs into a `docs/` folder, the image links in this README will resolve automatically.
-
----
-
-## 📄 License
-
-MIT
