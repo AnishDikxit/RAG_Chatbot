@@ -1,4 +1,4 @@
-# 🤖 RAG Chatbot — YouTube Transcript Q&A
+# 🤖 Hybrid RAG Chatbot — YouTube Transcript Q&A
 
 A **Retrieval-Augmented Generation (RAG)** chatbot that answers questions grounded in **YouTube video transcripts**. Built with **LangChain**, **FAISS**, **BM25**, **cross-encoder re-ranking**, and **Claude** as the generation LLM.
 
