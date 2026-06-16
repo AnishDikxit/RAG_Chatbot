@@ -3,3 +3,5 @@ venv/
 __pycache__/
 faiss_index/
 eval_results/
+measure_metrics.py
+resume_metrics.json
